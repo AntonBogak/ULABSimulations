@@ -1,0 +1,72 @@
+# GatherData
+import sims  # type: ignore
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants
+r = 1
+G = 4 * (np.pi)**2
+v = np.sqrt(G / r)
+T = 2 * np.pi * r / v
+
+# Define how many velocities you want to test
+n_velocities = 10
+
+# Define the min and max speeds (as multiples of v)
+v_min = 0
+v_max = 6
+
+# Create velocity magnitudes
+v_multipliers = np.linspace(v_min, v_max, n_velocities)
+
+# Generate velocity vectors
+velocities = [[0, 0, -vm * v] for vm in v_multipliers]
+
+# Collect results
+stability_counts = []
+speed_labels = []
+scattering_counts = []
+exchange_counts = []
+flyby_counts = []
+for vel_arr in velocities:
+    summary = sims.runSims(vel_arr, 1000)  # Make sure runSims returns a Counter object
+    count_stab = summary.get("Rogue + Planet Stability Events", 0)
+    count_binaryscatter = summary.get("Rogue and planet scattered", 0)
+    count_exchange = summary.get("planet only scattered")
+    count_flyby = summary.get("Flyby")
+    stability_counts.append(count_stab)
+    scattering_counts.append(count_binaryscatter)
+    exchange_counts.append(count_exchange)
+    flyby_counts.append(count_flyby)
+    speed_labels.append(round(abs(vel_arr[2]/v), 2))  # for x-axis labels like 0.3, 0.6, 1.0, etc.
+    print(f'Velocity {vel_arr[2]:.2f} = {count_stab} stability events')
+    print(f'Velocity {vel_arr[2]:.2f} = {count_binaryscatter} ionization events')
+    print(f'Velocity {vel_arr[2]:.2f} = {count_exchange} exchange events')
+    print(f'Velocity {vel_arr[2]:.2f} = {count_flyby} flyby events')
+
+
+
+fig, axs = plt.subplots(1, 4, figsize=(14, 5))  # 1 row, 2 columns
+axs[0].plot(speed_labels, stability_counts, marker='o', linestyle='-', color='blue')
+axs[0].set_xlabel("Initial Rogue Speed (Multiples of V)")
+axs[0].set_ylabel(f"Number of Rogue + Planet Stability Events out of 1000")
+axs[0].set_title("Binary Stability Events")
+axs[0].grid(True)
+axs[1].plot(speed_labels, scattering_counts, marker='o', linestyle='-', color='blue')
+axs[1].set_xlabel("Initial Rogue Speed (Multiples of V)")
+axs[1].set_ylabel("Number of Binary Scattering Events out of 1000")
+axs[1].set_title("Ionization Events Events")
+axs[1].grid(True)
+axs[2].plot(speed_labels, exchange_counts, marker='o', linestyle='-', color='blue')
+axs[2].set_xlabel("Initial Rogue Speed (Multiples of V)")
+axs[2].set_ylabel("Number of Exchanges out of 1000")
+axs[2].set_title("Exchange Events Events")
+axs[2].grid(True)
+axs[3].plot(speed_labels, flyby_counts, marker='o', linestyle='-', color='blue')
+axs[3].set_xlabel("Initial Rogue Speed (Multiples of V)")
+axs[3].set_ylabel("Number of Flybys out of 1000")
+axs[3].set_title(" Flyby Events")
+axs[3].grid(True)
+
+plt.tight_layout()
+plt.show()

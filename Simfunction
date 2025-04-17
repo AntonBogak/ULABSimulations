@@ -1,0 +1,88 @@
+import rebound
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+from collections import Counter
+r = 1
+G = 4*(np.pi)**2
+v = np.sqrt(G/r)
+T = 2*np.pi*r/v
+def perturb(mass, pos_arr, vel_arr): #Runs the simulation with the rogue body
+    sim = rebound.Simulation()
+    #Units and Constants
+    sim.units = ("AU", "yr", "Msun")
+    #Star 
+    sim.add(m=1, x=0, y=0, z=0, vx=0, vy=0, vz=0, r=0.00465047)
+    sim.move_to_com()
+    #Planet 1 
+    sim.add(m=1e-5, x=r, y=0, z=0, vx=0, vy=v, vz=0,r=4.26352e-5)
+    sim.move_to_com()
+    #Rogue Body 
+    sim.add(m=mass, x=pos_arr[0], y=pos_arr[1], z=pos_arr[2], vx=vel_arr[0], vy=vel_arr[1], vz=vel_arr[2],r=4.26352e-5)
+    sim.move_to_com()
+    #Integration Time (second value is the number of years, third is "resolution")
+    time = np.linspace(0,100,800)
+    #Integration loop, updates particle positions
+    sim.collision = "direct"
+    sim.collision_resolve = "merge"
+    for t in time:
+        sim.integrate(t)
+        if sim.N <= 2:
+            return "collision"
+        #Collision detection
+    planet_scattered = False
+    rogue_scattered = False
+    planet_stable = False
+    rogue_stable = False
+    #Scattering detection after simulation
+    if sim.particles[1].orbit(primary=sim.particles[0]).e >= 1:
+        planet_scattered = True
+    if sim.particles[2].orbit(primary=sim.particles[0]).e >=1:
+        rogue_scattered = True
+    #Stable detection
+    if 0 <= sim.particles[1].orbit(primary=sim.particles[0]).e < 1:
+        planet_stable = True
+    if 0 <= sim.particles[2].orbit(primary=sim.particles[0]).e < 1:
+        rogue_stable = True
+    
+    if planet_scattered and rogue_scattered:
+        return "Rogue and planet scattered"
+    elif planet_scattered and not rogue_scattered:
+        return "planet only scattered"
+    #if rogue_scattered and not planet_scattered:
+     #   return "rogue only scattered"
+    
+    elif planet_stable and rogue_stable:
+        return "Rogue + Planet Stability Events"
+    else:
+        return "Flyby"
+    #if planet_stable and not rogue_stable:
+      #  return "Planet stability only"
+    #if rogue_stable and not planet_stable:
+     #   return "Rogue stability only"
+
+#Simulation runner  
+def runSims(vel_arr, total):
+    results = []
+    pbar = 0
+    for i in range(total):
+        pos_arr = [1, random.uniform(-2, 2), random.uniform(-2, 2)]
+        outcome = perturb(1, pos_arr, vel_arr)
+        pbar += 1
+        if pbar % 100 == 0:
+            print(f'{pbar} simulations complete')
+        results.append(outcome)
+
+    summary = Counter(results)
+    print(summary)
+    return summary
+
+
+#After I get this to work, implement a bound orbit detector. 
+#We will run about 1000 simulations for each velocity, and we will be using a scale factor of n*v for initial velocity.
+#Implement a detector to determine if the rogue body collided with the star or with the planet
+#If a collision occurs, end the simulation.
+#Plot a histogram of bound orbit simulation results to initial velocity
+
+#Next, plot the cross section dependent on the velocity of the rogue body.
+#Figure out a way to calculate cross section based on velocity input.
